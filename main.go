@@ -26,7 +26,7 @@ func main() {
 func handleBind(w ldap.ResponseWriter, m *ldap.Message) {
 	r := m.GetBindRequest()
 	res := ldap.NewBindResponse(ldap.LDAPResultInvalidCredentials)
-	ok, err := api.Bind(string(r.Name()), r.AuthenticationChoice())
+	ok, err := api.Bind(r.Name(), r.AuthenticationSimple())
 	if ok {
 		res.SetResultCode(ldap.LDAPResultSuccess)
 		w.Write(res)
