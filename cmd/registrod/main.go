@@ -45,13 +45,15 @@ func handleBind(w ldap.ResponseWriter, m *ldap.Message) {
 func handleSearch(w ldap.ResponseWriter, m *ldap.Message) {
 	r := m.GetSearchRequest()
 	baseObject := string(r.BaseObject())
+	res := ldap.NewSearchResultDoneResponse(ldap.LDAPResultUnwillingToPerform)
 	if baseObject == "" {
-		baseObject = "$$fail$$"
+		w.Write(res)
+		m.Abandon()
+		return
 	}
 	var (
 		err error
 	)
-	res := ldap.NewSearchResultDoneResponse(ldap.LDAPResultUnwillingToPerform)
 	switch baseObject {
 	case os.Getenv("REGISTRO_USERSDN"):
 		res, err = handleUserSearch(w, m)
@@ -59,7 +61,7 @@ func handleSearch(w ldap.ResponseWriter, m *ldap.Message) {
 		res, err = handleGroupSearch(w, m)
 	}
 	if err != nil {
-		log.Fatalf("%s", err)
+		log.Printf("%s", err)
 	}
 	w.Write(res)
 	m.Abandon()
@@ -77,8 +79,8 @@ func handleUserSearch(w ldap.ResponseWriter, m *ldap.Message) (res message.Searc
 		res = ldap.NewSearchResultDoneResponse(ldap.LDAPResultNoSuchObject)
 		return
 	}
-	for _ = range users {
-		// TODO conversion + write
+	for _, u := range users {
+		w.Write(u.ToLDAPEntry())
 	}
 	res = ldap.NewSearchResultDoneResponse(ldap.LDAPResultSuccess)
 	return

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	simplejson "github.com/bitly/go-simplejson"
+	"github.com/imdario/registro"
 	"github.com/mozillazg/request"
 	"github.com/vjeantet/goldap/message"
 )
@@ -56,7 +57,7 @@ func newRequest() (rq *request.Request) {
 }
 
 func endpoint(op string) string {
-	return fmt.Sprintf("%s/%s", os.Getenv("REGISTRO_ENDPOINT"), op)
+	return fmt.Sprintf("%s/%s/", os.Getenv("REGISTRO_ENDPOINT"), op)
 }
 
 func resolveUsername(dn message.LDAPDN, baseDN string) (username string, err error) {
@@ -77,7 +78,7 @@ func resolveUsername(dn message.LDAPDN, baseDN string) (username string, err err
 }
 
 // GetUsers retrieves users
-func GetUsers(filter message.Filter) (users []interface{}, err error) {
+func GetUsers(filter message.Filter) (users []registro.User, err error) {
 	rq := newRequest()
 	rq.Params, err = resolveUserFilter(filter)
 	if err != nil {
@@ -90,13 +91,23 @@ func GetUsers(filter message.Filter) (users []interface{}, err error) {
 	if err != nil {
 		return
 	}
+	b, err := rs.Content()
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal(b, &users)
+	if err != nil {
+		return
+	}
 	return
 }
 
 func resolveUserFilter(filter message.Filter) (params map[string]string, err error) {
-	params = make(map[string]string)
 	switch filter.(type) {
+	case message.FilterPresent:
+		// NOOP
 	case message.FilterEqualityMatch:
+		params = make(map[string]string)
 		feq := filter.(message.FilterEqualityMatch)
 		key := string(feq.AttributeDesc())
 		switch key {
